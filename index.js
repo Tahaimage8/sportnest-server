@@ -7,7 +7,7 @@ const cors = require('cors');
 dotenv.config();
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const uri = process.env.MONGODB_URI;
 
@@ -41,7 +41,13 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/facilities', async (req, res)=> {
+    app.get(`/facilities/:id`, async (req, res) => {
+      const {id} = req.params;
+      const result = await facilities.findOne({_id: new ObjectId(id)});
+      res.send(result);
+    })
+
+    app.post('/facilities', async (req, res) => {
       const newFacility = req.body;
       const result = await facilities.insertOne(newFacility);
       res.send(result);
