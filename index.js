@@ -28,9 +28,8 @@ async function run() {
     await client.connect();
 
     const db = client.db("sportNestDB");
-
     const facilities = db.collection("facilities");
-
+    const bookingCollection = db.collection("bookings")
     app.get(`/facilities`, async (req, res) => {
       const result = await facilities.find().toArray();
       res.send(result);
@@ -65,6 +64,13 @@ async function run() {
       const result = await facilities.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
+
+    app.post("/booking", async (req,res)=>{
+      const bookingData = req.body;
+      const result = await bookingCollection.insertOne(bookingData);
+
+      res.json(result);
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log(
