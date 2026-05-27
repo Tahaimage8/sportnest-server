@@ -29,21 +29,47 @@ async function run() {
 
     const db = client.db("sportNestDB");
     const facilities = db.collection("facilities");
-    const bookingCollection = db.collection("bookings")
-    app.get(`/facilities`, async (req, res) => {
-      const result = await facilities.find().toArray();
+    const bookingCollection = db.collection("bookings");
+
+    app.get("/facilities", async (req, res) => {
+      const { search, type, ownerEmail, limit } = req.query;
+
+      const query = {};
+
+      // Search by facility name
+      if (search) {
+        query.name = { $regex: search, $options: "i" };
+      }
+
+      //type
+      if (type) {
+        const typeList = type.split(",");
+
+        query.facility_type = {
+          $in: typeList.map((item) => new RegExp(`^${item}$`, "i")),
+        };
+      }
+
+      //owner email
+      if (ownerEmail) {
+        query.owner_email = ownerEmail;
+      }
+
+      const result = await facilities
+        .find(query)
+        .limit(limit ? parseInt(limit) : 0)
+        .toArray();
+
       res.send(result);
     });
 
-app.get("/my-facilities/:email", async (req, res) => {
-  const { email } = req.params;
+    app.get("/my-facilities/:email", async (req, res) => {
+      const { email } = req.params;
 
-  const result = await facilities
-    .find({ owner_email: email })
-    .toArray();
+      const result = await facilities.find({ owner_email: email }).toArray();
 
-  res.send(result);
-});
+      res.send(result);
+    });
     app.get(`/facilities/:id`, async (req, res) => {
       const { id } = req.params;
       const result = await facilities.findOne({ _id: new ObjectId(id) });
@@ -68,32 +94,34 @@ app.get("/my-facilities/:email", async (req, res) => {
       res.send(result);
     });
 
-    app.delete('/facilities/:id', async (req, res) => {
+    app.delete("/facilities/:id", async (req, res) => {
       const { id } = req.params;
       const result = await facilities.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
 
-    app.post("/booking", async (req,res)=>{
+    app.post("/booking", async (req, res) => {
       const bookingData = req.body;
       const result = await bookingCollection.insertOne(bookingData);
 
       res.json(result);
     });
 
-    app.get("/booking/:userId", async(req,res) =>{
-      const {userId} = req.params;
+    app.get("/booking/:userId", async (req, res) => {
+      const { userId } = req.params;
 
-      const result = await bookingCollection.find({userId: userId}).toArray();
+      const result = await bookingCollection.find({ userId: userId }).toArray();
 
-      res.json(result)
-    })
+      res.json(result);
+    });
 
-    app.delete("/booking/:bookingId", async(req,res)=>{
-      const {bookingId} = req.params
-      const result = await bookingCollection.deleteOne({_id: new ObjectId(bookingId)})
-      res.json(result)
-    })
+    app.delete("/booking/:bookingId", async (req, res) => {
+      const { bookingId } = req.params;
+      const result = await bookingCollection.deleteOne({
+        _id: new ObjectId(bookingId),
+      });
+      res.json(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
