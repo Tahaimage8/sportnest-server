@@ -7,6 +7,7 @@ const cors = require("cors");
 dotenv.config();
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 
 const uri = process.env.MONGODB_URI;
 
@@ -22,6 +23,34 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const JWKS = createRemoteJWKSet(
+  new URL("http://localhost:3000/api/auth/jwks")
+)
+
+const verifyToken = async(req, res ,next)=>{
+
+    const authHeader = req?.headers.authorization;
+    if(!authHeader){
+      return res.status(401).send({message:"Unauthorized Access"})
+    }
+    const token = authHeader.split(" ")[1];
+
+    if(!token){
+      return res.status(401).send({message:"Unauthorized Access"})
+    }
+    try {
+      const {payload} = await jwtVerify(token, JWKS);
+      // console.log(payload);
+      next();
+      
+    } catch (error) {
+      return res.status(403).send({message:"Forbidden Access"})
+    }
+
+
+
+}
 
 async function run() {
   try {
@@ -62,27 +91,30 @@ async function run() {
 
       res.send(result);
     });
-
-    app.get("/my-facilities/:email", async (req, res) => {
+// middleware
+    app.get("/my-facilities/:email",verifyToken ,async (req, res) => {
       const { email } = req.params;
 
       const result = await facilities.find({ owner_email: email }).toArray();
 
       res.send(result);
     });
-    app.get(`/facilities/:id`, async (req, res) => {
-      const { id } = req.params;
-      const result = await facilities.findOne({ _id: new ObjectId(id) });
-      res.send(result);
-    });
+
+    // middleware
+app.get("/facilities/:id",verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const result = await facilities.findOne({ _id: new ObjectId(id) });
+    res.send(result);
+  }
+);
 
     app.post("/facilities", async (req, res) => {
       const newFacility = req.body;
       const result = await facilities.insertOne(newFacility);
       res.send(result);
     });
-
-    app.patch("/facilities/:id", async (req, res) => {
+// middleware
+    app.patch("/facilities/:id", verifyToken,async (req, res) => {
       const { id } = req.params;
       const updatedFacility = req.body;
 
@@ -93,29 +125,29 @@ async function run() {
 
       res.send(result);
     });
-
-    app.delete("/facilities/:id", async (req, res) => {
+// middleware
+    app.delete("/facilities/:id", verifyToken,async (req, res) => {
       const { id } = req.params;
       const result = await facilities.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
-
-    app.post("/booking", async (req, res) => {
+// middleware
+    app.post("/booking", verifyToken,async (req, res) => {
       const bookingData = req.body;
       const result = await bookingCollection.insertOne(bookingData);
 
       res.json(result);
     });
-
-    app.get("/booking/:userId", async (req, res) => {
+// middleware
+    app.get("/booking/:userId", verifyToken,async (req, res) => {
       const { userId } = req.params;
 
       const result = await bookingCollection.find({ userId: userId }).toArray();
 
       res.json(result);
     });
-
-    app.delete("/booking/:bookingId", async (req, res) => {
+// middleware
+    app.delete("/booking/:bookingId", verifyToken,async (req, res) => {
       const { bookingId } = req.params;
       const result = await bookingCollection.deleteOne({
         _id: new ObjectId(bookingId),
