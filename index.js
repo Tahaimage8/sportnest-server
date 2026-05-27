@@ -25,32 +25,27 @@ const client = new MongoClient(uri, {
 });
 
 const JWKS = createRemoteJWKSet(
-  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
-)
+  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+);
 
-const verifyToken = async(req, res ,next)=>{
+const verifyToken = async (req, res, next) => {
+  const authHeader = req?.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorized Access" });
+  }
+  const token = authHeader.split(" ")[1];
 
-    const authHeader = req?.headers.authorization;
-    if(!authHeader){
-      return res.status(401).send({message:"Unauthorized Access"})
-    }
-    const token = authHeader.split(" ")[1];
-
-    if(!token){
-      return res.status(401).send({message:"Unauthorized Access"})
-    }
-    try {
-      const {payload} = await jwtVerify(token, JWKS);
-      // console.log(payload);
-      next();
-      
-    } catch (error) {
-      return res.status(403).send({message:"Forbidden Access"})
-    }
-
-
-
-}
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized Access" });
+  }
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    // console.log(payload);
+    next();
+  } catch (error) {
+    return res.status(403).send({ message: "Forbidden Access" });
+  }
+};
 
 async function run() {
   try {
@@ -91,8 +86,8 @@ async function run() {
 
       res.send(result);
     });
-// middleware
-    app.get("/my-facilities/:email",verifyToken ,async (req, res) => {
+    // middleware
+    app.get("/my-facilities/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
 
       const result = await facilities.find({ owner_email: email }).toArray();
@@ -101,20 +96,19 @@ async function run() {
     });
 
     // middleware
-app.get("/facilities/:id",verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const result = await facilities.findOne({ _id: new ObjectId(id) });
-    res.send(result);
-  }
-);
+    app.get("/facilities/:id", verifyToken, async (req, res) => {
+      const { id } = req.params;
+      const result = await facilities.findOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
 
     app.post("/facilities", async (req, res) => {
       const newFacility = req.body;
       const result = await facilities.insertOne(newFacility);
       res.send(result);
     });
-// middleware
-    app.patch("/facilities/:id", verifyToken,async (req, res) => {
+    // middleware
+    app.patch("/facilities/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const updatedFacility = req.body;
 
@@ -125,29 +119,29 @@ app.get("/facilities/:id",verifyToken, async (req, res) => {
 
       res.send(result);
     });
-// middleware
-    app.delete("/facilities/:id", verifyToken,async (req, res) => {
+    // middleware
+    app.delete("/facilities/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const result = await facilities.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
-// middleware
-    app.post("/booking", verifyToken,async (req, res) => {
+    // middleware
+    app.post("/booking", verifyToken, async (req, res) => {
       const bookingData = req.body;
       const result = await bookingCollection.insertOne(bookingData);
 
       res.json(result);
     });
-// middleware
-    app.get("/booking/:userId", verifyToken,async (req, res) => {
+    // middleware
+    app.get("/booking/:userId", verifyToken, async (req, res) => {
       const { userId } = req.params;
 
       const result = await bookingCollection.find({ userId: userId }).toArray();
 
       res.json(result);
     });
-// middleware
-    app.delete("/booking/:bookingId", verifyToken,async (req, res) => {
+    // middleware
+    app.delete("/booking/:bookingId", verifyToken, async (req, res) => {
       const { bookingId } = req.params;
       const result = await bookingCollection.deleteOne({
         _id: new ObjectId(bookingId),
