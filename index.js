@@ -35,6 +35,15 @@ async function run() {
       res.send(result);
     });
 
+app.get("/my-facilities/:email", async (req, res) => {
+  const { email } = req.params;
+
+  const result = await facilities
+    .find({ owner_email: email })
+    .toArray();
+
+  res.send(result);
+});
     app.get(`/facilities/:id`, async (req, res) => {
       const { id } = req.params;
       const result = await facilities.findOne({ _id: new ObjectId(id) });
